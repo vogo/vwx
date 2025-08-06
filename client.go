@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+// Package vwxa provides WeChat Mini Program API client functionality.
 package vwxa
 
 import (
@@ -22,6 +23,7 @@ import (
 	"time"
 )
 
+// Client represents a WeChat Mini Program API client.
 type Client struct {
 	AppID     string
 	AppSecret string
@@ -32,11 +34,13 @@ type Client struct {
 	cacheProvider  CacheProvider
 }
 
+// CacheProvider defines the interface for caching access tokens and other data.
 type CacheProvider interface {
 	Get(ctx context.Context, key string) string
 	Set(ctx context.Context, key string, value string, expire time.Duration) error
 }
 
+// NewClient creates a new WeChat Mini Program API client with the given app ID and secret.
 func NewClient(appID, appSecret string, options ...func(*Client)) *Client {
 	c := &Client{
 		AppID:     appID,
@@ -51,18 +55,21 @@ func NewClient(appID, appSecret string, options ...func(*Client)) *Client {
 	return c
 }
 
+// WithAppEnv sets the app environment (release, trial, develop).
 func WithAppEnv(env string) func(*Client) {
 	return func(c *Client) {
 		c.AppEnv = env
 	}
 }
 
+// WithCacheKeyPrefix sets the cache key prefix for the client.
 func WithCacheKeyPrefix(prefix string) func(*Client) {
 	return func(c *Client) {
 		c.cacheKeyPrefix = prefix
 	}
 }
 
+// WithCacheProvider sets the cache provider for the client.
 func WithCacheProvider(provider CacheProvider) func(*Client) {
 	return func(c *Client) {
 		c.cacheProvider = provider

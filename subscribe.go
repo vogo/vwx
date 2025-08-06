@@ -32,12 +32,12 @@ const (
 	subscribeMessageSendURL = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=%s"
 )
 
-// 订阅消息数据项
+// SubscribeMessageDataItem represents a data item in a subscribe message.
 type SubscribeMessageDataItem struct {
 	Value string `json:"value"`
 }
 
-// 订阅消息请求
+// SubscribeMessageRequest represents a request to send a subscribe message.
 type SubscribeMessageRequest struct {
 	ToUser           string                               `json:"touser"`                      // 接收者（用户）的 openid
 	TemplateID       string                               `json:"template_id"`                 // 所需下发的订阅消息的模板id
@@ -47,13 +47,13 @@ type SubscribeMessageRequest struct {
 	Lang             string                               `json:"lang,omitempty"`              // 进入小程序查看的语言类型，支持zh_CN(简体中文)、en_US(英文)、zh_HK(繁体中文)、zh_TW(繁体中文)，默认为zh_CN
 }
 
-// 订阅消息响应
+// SubscribeMessageResponse represents the response from sending a subscribe message.
 type SubscribeMessageResponse struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
 }
 
-// 发送订阅消息
+// SendSubscribeMessage sends a subscribe message to the specified user.
 func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*SubscribeMessageResponse, error) {
 	accessToken, err := c.GetAccessToken()
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 	return &response, nil
 }
 
-// 发送订阅消息的便捷方法
+// SendSubscribeMessageSimple is a convenient method to send a subscribe message with simple data.
 func (c *Client) SendSubscribeMessageSimple(openID, templateID, page string, data map[string]string) (*SubscribeMessageResponse, error) {
 	// 构建数据项
 	dataItems := make(map[string]*SubscribeMessageDataItem)

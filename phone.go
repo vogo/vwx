@@ -28,18 +28,21 @@ import (
 	"github.com/vogo/vogo/vlog"
 )
 
+// PhoneEncryptedData represents the encrypted phone data from WeChat Mini Program.
 type PhoneEncryptedData struct {
 	EncryptedData string `json:"encrypted_data"`
 	IV            string `json:"iv"`
 	Code          string `json:"code"`
 }
 
+// PhoneInfo represents the decrypted phone information from WeChat.
 type PhoneInfo struct {
 	PhoneNumber     string `json:"phoneNumber"`
 	PurePhoneNumber string `json:"purePhoneNumber"`
 	CountryCode     string `json:"countryCode"`
 }
 
+// ParsePhoneEncryptedData parses and decrypts phone encrypted data from WeChat Mini Program.
 func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, error) {
 	var encData PhoneEncryptedData
 	err := json.Unmarshal(data, &encData)
@@ -59,6 +62,7 @@ func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, error) {
 	return c.DecryptPhoneNumber(sessionInfo.SessionKey, encData.EncryptedData, encData.IV)
 }
 
+// DecryptPhoneNumber decrypts phone number using session key, encrypted data and IV.
 func (c *Client) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (_info *PhoneInfo, _err error) {
 	defer func() {
 		if err := recover(); err != nil {

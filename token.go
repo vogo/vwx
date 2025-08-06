@@ -37,7 +37,7 @@ func (c *Client) cacheKeyAccessToken() string {
 	return c.cacheKeyPrefix + "vwxa:access_token:" + c.AppID
 }
 
-// 获取AccessToken
+// GetAccessToken retrieves access token from WeChat API with caching support.
 func (c *Client) GetAccessToken() (string, error) {
 	if c.cacheProvider != nil {
 		cachedToken := c.cacheProvider.Get(context.Background(), c.cacheKeyAccessToken())

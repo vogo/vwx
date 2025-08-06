@@ -29,6 +29,7 @@ const (
 	jsCode2SessionURL = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
 )
 
+// WechatSessionResponse represents the response from WeChat session API.
 type WechatSessionResponse struct {
 	OpenID     string `json:"openid"`
 	SessionKey string `json:"session_key"`
@@ -36,6 +37,7 @@ type WechatSessionResponse struct {
 	ErrMsg     string `json:"errmsg"`
 }
 
+// GetSessionKey retrieves session key from WeChat using authorization code.
 func (c *Client) GetSessionKey(code string) (*WechatSessionResponse, error) {
 	vlog.Infof("get session key, appid=%s, code=%s", c.AppID, code)
 

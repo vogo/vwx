@@ -28,7 +28,7 @@ const (
 	generateCodeUnlimitURL = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token="
 )
 
-// GenerateQRCode 生成小程序二维码
+// GenerateQRCode generates QR code for WeChat Mini Program with specified scene and page.
 func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
 	accessToken, err := c.GetAccessToken()
 	if err != nil {
