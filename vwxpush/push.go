@@ -92,7 +92,7 @@ func (c *WxPushReceiver) HandlePushMessage(
 		signature, timestamp, nonce, msgSignature, encryptType)
 
 	// Process according to security mode
-	if encryptType == "aes" || c.SecurityMode == "secure" {
+	if encryptType == "aes" && len(body) > 0 {
 		// Secure mode: requires decryption
 		return c.handleEncryptedMessage(msgSignature, timestamp, nonce, body, handler)
 	} else {
@@ -109,16 +109,14 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 ) ([]byte, error) {
 	// Parse encrypted message
 	var encryptedMsg EncryptedMessage
-	if len(body) > 0 {
-		if c.DataType == "json" {
-			if err := json.Unmarshal(body, &encryptedMsg); err != nil {
-				return nil, fmt.Errorf("unmarshal encrypted message failed: %v", err)
-			}
-		} else {
-			// Default XML format
-			if err := xml.Unmarshal(body, &encryptedMsg); err != nil {
-				return nil, fmt.Errorf("unmarshal encrypted message failed: %v", err)
-			}
+	if c.DataType == "json" {
+		if err := json.Unmarshal(body, &encryptedMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal encrypted message failed: %v", err)
+		}
+	} else {
+		// Default XML format
+		if err := xml.Unmarshal(body, &encryptedMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal encrypted message failed: %v", err)
 		}
 	}
 
@@ -131,26 +129,24 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 	var err error
 	var appid string
 
-	if len(body) > 0 {
-		var decryptedData []byte
-		decryptedData, appid, err = c.decryptMessage(encryptedMsg.Encrypt)
-		if err != nil {
-			return nil, fmt.Errorf("decrypt message failed: %v", err)
-		}
+	var decryptedData []byte
+	decryptedData, appid, err = c.decryptMessage(encryptedMsg.Encrypt)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt message failed: %v", err)
+	}
 
-		vlog.Infof("push message, appid: %s, message: %s", appid, string(decryptedData))
+	vlog.Infof("push message, appid: %s, message: %s", appid, string(decryptedData))
 
-		// Parse base info
-		baseInfo, err := c.parseBaseInfo(decryptedData)
-		if err != nil {
-			return nil, fmt.Errorf("parse base info failed: %v", err)
-		}
+	// Parse base info
+	baseInfo, err := c.parseBaseInfo(decryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("parse base info failed: %v", err)
+	}
 
-		// Call business processing function
-		responseData, err = handler(appid, baseInfo, decryptedData)
-		if err != nil {
-			return nil, fmt.Errorf("handler failed: %v", err)
-		}
+	// Call business processing function
+	responseData, err = handler(appid, baseInfo, decryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("handler failed: %v", err)
 	}
 
 	// If there is response data, it needs to be encrypted and returned
