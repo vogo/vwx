@@ -185,6 +185,10 @@ func (c *WxPushReceiver) handlePlainMessage(
 		return nil, fmt.Errorf("invalid signature")
 	}
 
+	if len(body) == 0 {
+		return []byte("success"), nil
+	}
+
 	vlog.Infof("plain message: %s", string(body))
 
 	// Parse base info
