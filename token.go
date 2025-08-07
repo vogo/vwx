@@ -46,7 +46,7 @@ func (c *Client) GetAccessToken() (string, error) {
 		}
 	}
 
-	url := fmt.Sprintf(accessTokenURL, c.AppID, c.AppSecret)
+	url := fmt.Sprintf(accessTokenURL, c.AppID, c.appSecret)
 
 	resp, err := http.Get(url)
 	if err != nil {

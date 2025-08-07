@@ -41,7 +41,7 @@ func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
 		"scene":       scene,
 		"page":        page,
 		"check_path":  false,
-		"env_version": c.AppEnv,
+		"env_version": c.envVersion,
 	}
 
 	jsonData, err := json.Marshal(params)

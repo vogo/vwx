@@ -41,7 +41,7 @@ type WechatSessionResponse struct {
 func (c *Client) GetSessionKey(code string) (*WechatSessionResponse, error) {
 	vlog.Infof("get session key, appid=%s, code=%s", c.AppID, code)
 
-	url := fmt.Sprintf(jsCode2SessionURL, c.AppID, c.AppSecret, code)
+	url := fmt.Sprintf(jsCode2SessionURL, c.AppID, c.appSecret, code)
 
 	resp, err := http.Get(url)
 	if err != nil {

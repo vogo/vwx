@@ -26,9 +26,9 @@ import (
 // Client represents a WeChat Mini Program API client.
 type Client struct {
 	AppID     string
-	AppSecret string
+	appSecret string
 
-	AppEnv string // release, trial, develop
+	envVersion string // release, trial, develop
 
 	cacheKeyPrefix string
 	cacheProvider  CacheProvider
@@ -43,9 +43,9 @@ type CacheProvider interface {
 // NewClient creates a new WeChat Mini Program API client with the given app ID and secret.
 func NewClient(appID, appSecret string, options ...func(*Client)) *Client {
 	c := &Client{
-		AppID:     appID,
-		AppSecret: appSecret,
-		AppEnv:    "release",
+		AppID:      appID,
+		appSecret:  appSecret,
+		envVersion: "release",
 	}
 
 	for _, option := range options {
@@ -55,10 +55,10 @@ func NewClient(appID, appSecret string, options ...func(*Client)) *Client {
 	return c
 }
 
-// WithAppEnv sets the app environment (release, trial, develop).
-func WithAppEnv(env string) func(*Client) {
+// WithEnvVersion sets the app environment (release, trial, develop).
+func WithEnvVersion(env string) func(*Client) {
 	return func(c *Client) {
-		c.AppEnv = env
+		c.envVersion = env
 	}
 }
 
