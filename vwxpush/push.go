@@ -94,7 +94,7 @@ func (c *WxPushReceiver) HandlePushMessage(
 		signature, timestamp, nonce, msgSignature, encryptType)
 
 	// Process according to security mode
-	if encryptType == "aes" && c.SecurityMode == "secure" {
+	if encryptType == "aes" || c.SecurityMode == "secure" {
 		// Secure mode: requires decryption
 		return c.handleEncryptedMessage(signature, msgSignature, timestamp, nonce, body, handler)
 	} else {
