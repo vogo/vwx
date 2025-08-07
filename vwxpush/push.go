@@ -34,6 +34,7 @@ import (
 
 // WxPushReceiver WeChat message push receiver
 type WxPushReceiver struct {
+	AppID          string // AppID
 	Token          string // Token
 	EncodingAESKey string // Message encryption/decryption key
 	SecurityMode   string // Security mode: plain(plain text mode), secure(secure mode)
@@ -41,8 +42,9 @@ type WxPushReceiver struct {
 }
 
 // NewWxPushReceiver creates a new WeChat message push receiver
-func NewWxPushReceiver(token, encodingAESKey, securityMode, dataType string) *WxPushReceiver {
+func NewWxPushReceiver(appID, token, encodingAESKey, securityMode, dataType string) *WxPushReceiver {
 	return &WxPushReceiver{
+		AppID:          appID,
 		Token:          token,
 		EncodingAESKey: encodingAESKey,
 		SecurityMode:   securityMode,
@@ -92,9 +94,9 @@ func (c *WxPushReceiver) HandlePushMessage(
 		signature, timestamp, nonce, msgSignature, encryptType)
 
 	// Process according to security mode
-	if encryptType == "aes" && len(body) > 0 {
+	if encryptType == "aes" && c.SecurityMode == "secure" {
 		// Secure mode: requires decryption
-		return c.handleEncryptedMessage(msgSignature, timestamp, nonce, body, handler)
+		return c.handleEncryptedMessage(signature, msgSignature, timestamp, nonce, body, handler)
 	} else {
 		// Plain text mode: only verify signature
 		return c.handlePlainMessage(signature, timestamp, nonce, body, handler)
@@ -103,10 +105,18 @@ func (c *WxPushReceiver) HandlePushMessage(
 
 // handleEncryptedMessage handles encrypted messages
 func (c *WxPushReceiver) handleEncryptedMessage(
-	msgSignature, timestamp, nonce string,
+	signature, msgSignature, timestamp, nonce string,
 	body []byte,
 	handler func(string, *PushBaseInfo, []byte) ([]byte, error),
 ) ([]byte, error) {
+	if !c.verifySignature(c.Token, timestamp, nonce, signature) {
+		return nil, fmt.Errorf("invalid signature")
+	}
+
+	if len(body) == 0 {
+		return c.encryptResponse(c.AppID, []byte("success"))
+	}
+
 	// Parse encrypted message
 	var encryptedMsg EncryptedMessage
 	if c.DataType == "json" {
