@@ -18,36 +18,30 @@
 package vwxpush
 
 import (
-	"os"
 	"testing"
 )
 
 func TestVerifySignature(t *testing.T) {
 	// Get configuration from environment variables
-	token := os.Getenv("WX_TOKEN")
-	encodingAESKey := os.Getenv("WX_ENCODING_AES_KEY")
-
-	// Skip test if no configuration is provided
-	if token == "" || encodingAESKey == "" {
-		t.Skip("WX_TOKEN or WX_ENCODING_AES_KEY environment variable not set, skipping test")
-	}
+	testToken := "01234567890123456789012345678901"
+	testEncodingAESKey := "0123456789012345678901234567890123456789012"
 
 	// Initialize WxPushReceiver
 	receiver := &WxPushReceiver{
-		Token:          token,
-		EncodingAESKey: encodingAESKey,
+		Token:          testToken,
+		EncodingAESKey: testEncodingAESKey,
 		SecurityMode:   "plain", // Use plain mode for signature verification test
 		DataType:       "json",
 	}
 
 	// Test data from the provided signature verification example
-	testSignature := "fb0fd0a0f43fdd5d1a7ee02ecf0e0d2f4d089977"
+	testSignature := "a13313bd6bd4ada9eb09fb321e91e80f2265719c"
 	testTimestamp := "1754571998"
 	testNonce := "1885092304"
 	testEncrypt := ""
 
 	// Test signature verification
-	isValid := receiver.verifyMsgSignature(token, testTimestamp, testNonce, testEncrypt, testSignature)
+	isValid := receiver.verifyMsgSignature(testToken, testTimestamp, testNonce, testEncrypt, testSignature)
 
 	// The test will pass if signature verification works correctly
 	// Note: The actual result depends on whether the test token matches
@@ -55,7 +49,7 @@ func TestVerifySignature(t *testing.T) {
 	if !isValid {
 		t.Logf("Signature verification failed - this may be expected if test token differs from signature generation token")
 		t.Logf("Test signature: %s", testSignature)
-		t.Logf("Test token: %s", token)
+		t.Logf("Test token: %s", testToken)
 	}
 
 	// For demonstration, we'll consider the test successful if it runs without panic
