@@ -30,7 +30,7 @@ import (
 
 // PhoneEncryptedData represents the encrypted phone data from WeChat Mini Program.
 type PhoneEncryptedData struct {
-	EncryptedData string `json:"encrypted_data"`
+	EncryptedData string `json:"encryptedData"`
 	IV            string `json:"iv"`
 	Code          string `json:"code"`
 }
