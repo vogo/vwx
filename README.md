@@ -1,8 +1,8 @@
-# vwxa - 微信小程序 Go SDK
+# vwx - 微信 Go SDK
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
-vwxa 是一个微信小程序 Go SDK，提供了微信小程序开发中常用的 API 接口封装。
+vwx 是一个微信 Go SDK，提供了微信开发中常用的 API 接口封装, 包括小程序、消息推送等功能。
 
 ## 功能特性
 

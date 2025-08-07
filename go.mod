@@ -1,4 +1,4 @@
-module github.com/vogo/vwxa
+module github.com/vogo/vwx
 
 go 1.24.1
 
