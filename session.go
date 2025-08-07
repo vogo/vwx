@@ -29,8 +29,8 @@ const (
 	jsCode2SessionURL = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
 )
 
-// WechatSessionResponse represents the response from WeChat session API.
-type WechatSessionResponse struct {
+// SessionResponse represents the response from WeChat session API.
+type SessionResponse struct {
 	OpenID     string `json:"openid"`
 	SessionKey string `json:"session_key"`
 	ErrCode    int    `json:"errcode"`
@@ -38,7 +38,7 @@ type WechatSessionResponse struct {
 }
 
 // GetSessionKey retrieves session key from WeChat using authorization code.
-func (c *Client) GetSessionKey(code string) (*WechatSessionResponse, error) {
+func (c *Client) GetSessionKey(code string) (*SessionResponse, error) {
 	vlog.Infof("get session key, appid=%s, code=%s", c.AppID, code)
 
 	url := fmt.Sprintf(jsCode2SessionURL, c.AppID, c.appSecret, code)
@@ -49,7 +49,7 @@ func (c *Client) GetSessionKey(code string) (*WechatSessionResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var result WechatSessionResponse
+	var result SessionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}

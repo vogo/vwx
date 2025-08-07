@@ -43,23 +43,28 @@ type PhoneInfo struct {
 }
 
 // ParsePhoneEncryptedData parses and decrypts phone encrypted data from WeChat Mini Program.
-func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, error) {
+func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, *SessionResponse, error) {
 	var encData PhoneEncryptedData
 	err := json.Unmarshal(data, &encData)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(encData.Code) == 0 || len(encData.EncryptedData) == 0 || len(encData.IV) == 0 {
-		return nil, fmt.Errorf("code or encryptedData or iv is empty")
+		return nil, nil, fmt.Errorf("code or encryptedData or iv is empty")
 	}
 
 	sessionInfo, err := c.GetSessionKey(encData.Code)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return c.DecryptPhoneNumber(sessionInfo.SessionKey, encData.EncryptedData, encData.IV)
+	phoneInfo, err := c.DecryptPhoneNumber(sessionInfo.SessionKey, encData.EncryptedData, encData.IV)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return phoneInfo, sessionInfo, nil
 }
 
 // DecryptPhoneNumber decrypts phone number using session key, encrypted data and IV.
