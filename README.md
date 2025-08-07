@@ -1,193 +1,306 @@
-# vwx - 微信 Go SDK
+# vwx - WeChat Go SDK
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
-vwx 是一个微信 Go SDK，提供了微信开发中常用的 API 接口封装, 包括小程序、消息推送等功能。
+vwx is a comprehensive WeChat Go SDK that provides API encapsulation for common WeChat development tasks, including Mini Programs and message push functionality.
 
-## 功能特性
+## Features
 
-- 🔐 内容安全检查
-  - **文本内容安全检查** 
-  - **多媒体内容安全检查** 
-- 📱 用户数据处理
-  - **手机号解密**
-  - **会话管理**
--  📨 消息推送
-  - **订阅消息**
-- 🔗 工具功能
-  - **小程序码生成**
-  - **访问令牌管理**
+- 🔐 **Content Security**
+  - Text content security check
+  - Multimedia content security check (images/audio)
+  - Asynchronous media detection with callback support
+- 📱 **User Data Processing**
+  - Phone number decryption
+  - Session management and authorization
+  - User authentication via authorization codes
+- 📨 **Message Push**
+  - Subscribe message sending
+  - Message push receiver with encryption/decryption
+  - Support for both plain text and secure modes
+- 🔗 **Utility Functions**
+  - QR code generation for Mini Programs
+  - Access token management with caching
+  - Configurable environment support (release/trial/develop)
 
-## 安装
+## Installation
 
 ```bash
-go get github.com/vogo/vwxa
+go get github.com/vogo/vwx
 ```
 
-## 快速开始
+## Quick Start
 
-### 1. 初始化客户端
+### 1. Initialize Client
 
 ```go
 package main
 
 import (
-    "github.com/vogo/vwxa"
+    "github.com/vogo/vwx/vwxa"
 )
 
 func main() {
-    // 基础初始化
+    // Basic initialization
     client := vwxa.NewClient("your-app-id", "your-app-secret")
     
-    // 带配置选项的初始化
+    // Initialization with configuration options
     client := vwxa.NewClient(
         "your-app-id", 
         "your-app-secret",
-        vwxa.WithAppEnv("release"), // 环境：release, trial, develop
+        vwxa.WithEnvVersion("release"), // Environment: release, trial, develop
         vwxa.WithCacheKeyPrefix("myapp:"),
-        vwxa.WithCacheProvider(yourCacheProvider), // 可选的缓存提供者
+        vwxa.WithCacheProvider(yourCacheProvider), // Optional cache provider
     )
 }
 ```
 
-### 2. 内容安全检查
+### 2. Content Security Check
 
-#### 文本内容检查
+#### Text Content Check
 
 ```go
-// 单条内容检查
-result, err := client.MsgSecCheck("要检查的文本内容")
+// Check if text content is safe
+isSafe, err := client.IsMsgContentSafe("Hello, world!")
 if err != nil {
-    log.Printf("检查失败: %v", err)
-    return
-}
-
-// 简单的安全性判断
-isSafe, err := client.IsContentSafe("要检查的文本内容")
-if err != nil {
-    log.Printf("检查失败: %v", err)
-    return
+    log.Fatal(err)
 }
 
 if isSafe {
-    log.Println("内容安全")
+    fmt.Println("Content is safe")
 } else {
-    log.Println("内容存在风险")
+    fmt.Println("Content may have risks")
 }
+
+// Detailed security check
+response, err := client.MsgSecCheck("Your text content")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Check result: %+v\n", response)
 ```
 
-#### 多媒体内容检查
+#### Multimedia Content Check
 
 ```go
-// 图片异步检查
-result, err := client.CheckImageAsync("https://example.com/image.jpg", 1, "user-openid")
+// Asynchronous image check
+response, err := client.CheckImageAsync(
+    "https://example.com/image.jpg",
+    vwxa.SceneProfile, // Scene: Profile, Comment, Forum, Social
+    "user-openid",
+)
 if err != nil {
-    log.Printf("图片检查失败: %v", err)
-    return
+    log.Fatal(err)
 }
-log.Printf("检查任务ID: %s", result.TraceID)
+fmt.Printf("Trace ID: %s\n", response.TraceID)
 
-// 音频异步检查
-result, err := client.CheckAudioAsync("https://example.com/audio.mp3", 1, "user-openid")
-if err != nil {
-    log.Printf("音频检查失败: %v", err)
-    return
-}
+// Asynchronous audio check
+response, err = client.CheckAudioAsync(
+    "https://example.com/audio.mp3",
+    vwxa.SceneComment,
+    "user-openid",
+)
 
-// 解析异步检查回调结果
-callbackData := []byte(`{"trace_id":"xxx","status_code":0,...}`) // 微信回调数据
+// Parse callback result
 callbackResult, err := client.ParseMediaCheckCallback(callbackData)
 if err != nil {
-    log.Printf("解析回调失败: %v", err)
-    return
+    log.Fatal(err)
 }
 
-// 检查是否违规
-violationInfo, isViolation := client.CheckMediaViolation(callbackResult)
-if isViolation {
-    log.Printf("检测到违规内容: %s", violationInfo.Description)
-    log.Printf("违规建议: %s", violationInfo.Suggestion)
+// Check violation
+violationInfo := client.CheckMediaViolation(callbackResult)
+if violationInfo.IsViolation {
+    fmt.Printf("Content violation: %s\n", violationInfo.Reason)
 }
 ```
 
-### 3. 手机号解密
+### 3. User Data Processing
+
+#### Phone Number Decryption
 
 ```go
-// 方式1: 直接解析加密数据
-encryptedData := []byte(`{
-    "encrypted_data": "...",
-    "iv": "...",
-    "code": "..."
-}`)
-
-phoneInfo, err := client.ParsePhoneEncryptedData(encryptedData)
+// Parse encrypted phone data
+phoneInfo, sessionInfo, err := client.ParsePhoneEncryptedData(encryptedData)
 if err != nil {
-    log.Printf("解析失败: %v", err)
-    return
+    log.Fatal(err)
 }
 
-log.Printf("手机号: %s", phoneInfo.PhoneNumber)
-log.Printf("纯手机号: %s", phoneInfo.PurePhoneNumber)
-log.Printf("国家代码: %s", phoneInfo.CountryCode)
-
-// 方式2: 直接解密
-phoneInfo, err := client.DecryptPhoneNumber(sessionKey, encryptedData, iv)
-if err != nil {
-    log.Printf("解密失败: %v", err)
-    return
-}
+fmt.Printf("Phone: %s\n", phoneInfo.PhoneNumber)
+fmt.Printf("Pure Phone: %s\n", phoneInfo.PurePhoneNumber)
+fmt.Printf("Country Code: %s\n", phoneInfo.CountryCode)
 ```
 
-### 4. 订阅消息
+#### Session Management
 
 ```go
-// 发送订阅消息
+// Get session key using authorization code
+sessionResponse, err := client.GetSessionKey("authorization-code")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("OpenID: %s\n", sessionResponse.OpenID)
+fmt.Printf("Session Key: %s\n", sessionResponse.SessionKey)
+```
+
+### 4. Subscribe Messages
+
+```go
+// Simple subscribe message
+response, err := client.SendSubscribeMessageSimple(
+    "user-openid",
+    "template-id",
+    "pages/index",
+    map[string]string{
+        "thing1": "Hello",
+        "time2":  "2024-01-01 12:00:00",
+    },
+)
+
+// Advanced subscribe message
 request := &vwxa.SubscribeMessageRequest{
     ToUser:     "user-openid",
     TemplateID: "template-id",
-    Page:       "pages/index/index",
+    Page:       "pages/detail",
     Data: map[string]*vwxa.SubscribeMessageDataItem{
-        "thing1": {Value: "消息内容"},
+        "thing1": {Value: "Hello World"},
         "time2":  {Value: "2024-01-01 12:00:00"},
     },
+    MiniProgramState: "formal",
+    Lang:             "zh_CN",
 }
 
-response, err := client.SendSubscribeMessage(request)
+response, err = client.SendSubscribeMessage(request)
+```
+
+### 5. QR Code Generation
+
+```go
+// Generate QR code for Mini Program
+qrCodeData, err := client.GenerateQRCode("scene-value", "pages/index")
 if err != nil {
-    log.Printf("发送失败: %v", err)
-    return
+    log.Fatal(err)
 }
 
-// 简化发送方式
-err = client.SendSubscribeMessageSimple(
-    "user-openid",
-    "template-id",
-    "pages/index/index",
-    map[string]string{
-        "thing1": "消息内容",
-        "time2":  "2024-01-01 12:00:00",
+// Save QR code to file
+err = ioutil.WriteFile("qrcode.jpg", qrCodeData, 0644)
+```
+
+### 6. Message Push Receiver
+
+```go
+import "github.com/vogo/vwx/vwxpush"
+
+// Initialize push receiver
+receiver := &vwxpush.WxPushReceiver{
+    Token:          "your-token",
+    EncodingAESKey: "your-aes-key",
+    SecurityMode:   "secure", // or "plain"
+    DataType:       "xml",    // or "json"
+}
+
+// Handle push message
+response, err := receiver.HandlePushMessage(
+    func(name string) string {
+        // Return URL parameter value by name
+        return getURLParam(name)
+    },
+    requestBody,
+    func(appID string, decryptedContent []byte) ([]byte, error) {
+        // Your business logic here
+        fmt.Printf("Received message from %s: %s\n", appID, string(decryptedContent))
+        return []byte("success"), nil
     },
 )
 ```
 
-### 5. 小程序码生成
+## API Reference
+
+### vwxa Package
+
+#### Client
+- `NewClient(appID, appSecret string, options ...func(*Client)) *Client`
+- `WithEnvVersion(env string) func(*Client)`
+- `WithCacheKeyPrefix(prefix string) func(*Client)`
+- `WithCacheProvider(provider CacheProvider) func(*Client)`
+
+#### Access Token
+- `GetAccessToken() (string, error)`
+
+#### Session Management
+- `GetSessionKey(code string) (*SessionResponse, error)`
+
+#### Phone Number
+- `ParsePhoneEncryptedData(data []byte) (*PhoneInfo, *SessionResponse, error)`
+- `DecryptPhoneNumber(sessionKey, encryptedData, iv string) (*PhoneInfo, error)`
+
+#### Content Security
+- `MsgSecCheck(content string) (*MsgSecCheckResponse, error)`
+- `IsMsgContentSafe(content string) (bool, error)`
+- `MediaCheckAsync(mediaURL string, mediaType, scene int, openID string) (*MediaCheckAsyncResponse, error)`
+- `CheckImageAsync(imageURL string, scene int, openID string) (*MediaCheckAsyncResponse, error)`
+- `CheckAudioAsync(audioURL string, scene int, openID string) (*MediaCheckAsyncResponse, error)`
+- `ParseMediaCheckCallback(callbackData []byte) (*MediaCheckCallbackResult, error)`
+- `CheckMediaViolation(result *MediaCheckCallbackResult) *ViolationInfo`
+
+#### Subscribe Messages
+- `SendSubscribeMessage(request *SubscribeMessageRequest) (*SubscribeMessageResponse, error)`
+- `SendSubscribeMessageSimple(openID, templateID, page string, data map[string]string) (*SubscribeMessageResponse, error)`
+
+#### QR Code
+- `GenerateQRCode(scene, page string) ([]byte, error)`
+
+### vwxpush Package
+
+#### Message Push Receiver
+- `HandlePushMessage(parameterFetcher func(string) string, body []byte, handler func(string, []byte) ([]byte, error)) ([]byte, error)`
+
+## Constants
+
+### Media Types
+- `MediaTypeAudio = 1` // Audio
+- `MediaTypeImage = 2` // Image
+
+### Scenes
+- `SceneProfile = 1` // Profile
+- `SceneComment = 2` // Comment
+- `SceneForum = 3`   // Forum
+- `SceneSocial = 4`  // Social Log
+
+## Cache Provider Interface
 
 ```go
-// 生成小程序码
-qrCodeData, err := client.GenerateQRCode("scene=123&param=value", "pages/index/index")
+type CacheProvider interface {
+    Get(ctx context.Context, key string) string
+    Set(ctx context.Context, key string, value string, expire time.Duration) error
+}
+```
+
+Implement this interface to provide custom caching for access tokens.
+
+## Error Handling
+
+All API methods return appropriate error types. WeChat API errors are wrapped with descriptive messages.
+
+```go
+response, err := client.MsgSecCheck("content")
 if err != nil {
-    log.Printf("生成失败: %v", err)
+    // Handle error
+    log.Printf("Security check failed: %v", err)
     return
 }
 
-// 保存到文件
-ioutil.WriteFile("qrcode.jpg", qrCodeData, 0644)
-```
+if response.ErrCode != 0 {
+    log.Printf("WeChat API error: %d %s", response.ErrCode, response.ErrMsg)
+}
+## License
 
-## 许可证
+Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
-本项目采用 [Apache License 2.0](LICENSE) 许可证。
+## Contributing
 
-## 贡献
+Pull requests and issues are welcome!
 
-欢迎提交 Issue 和 Pull Request 来改进这个项目。
+## Support
+
+If you find this project useful, please give it a ⭐️!

@@ -40,6 +40,16 @@ type WxPushReceiver struct {
 	DataType       string // Data format: xml, json
 }
 
+// NewWxPushReceiver creates a new WeChat message push receiver
+func NewWxPushReceiver(token, encodingAESKey, securityMode, dataType string) *WxPushReceiver {
+	return &WxPushReceiver{
+		Token:          token,
+		EncodingAESKey: encodingAESKey,
+		SecurityMode:   securityMode,
+		DataType:       dataType,
+	}
+}
+
 // EncryptedMessage encrypted message structure
 type EncryptedMessage struct {
 	Encrypt string `xml:"Encrypt" json:"Encrypt"`
