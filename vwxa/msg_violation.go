@@ -32,24 +32,24 @@ const (
 	msgSecCheckURL = "https://api.weixin.qq.com/wxa/msg_sec_check?access_token=%s"
 )
 
-// MsgSecCheckRequest represents a request for message security check.
-type MsgSecCheckRequest struct {
+// MsgViolationCheckRequest represents a request for message security check.
+type MsgViolationCheckRequest struct {
 	Content string `json:"content"` // 要检测的文本内容，长度不超过 500KB
 }
 
-// MsgSecCheckResponse represents the response from message security check.
-type MsgSecCheckResponse struct {
+// MsgViolationCheckResponse represents the response from message security check.
+type MsgViolationCheckResponse struct {
 	ErrCode int    `json:"errcode"` // 错误码
 	ErrMsg  string `json:"errmsg"`  // 错误信息
 }
 
-// MsgSecCheck detects whether text content contains illegal or non-compliant content.
+// MsgViolationCheck detects whether text content contains illegal or non-compliant content.
 // Application scenarios:
 // - User profile illegal text detection
 // - Media news user article and comment content detection
 // - Game user uploaded material detection, etc.
 // Rate limit: single appId call limit is 4000 times/minute, 2,000,000 times/day
-func (c *Client) MsgSecCheck(content string) (*MsgSecCheckResponse, error) {
+func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, error) {
 	accessToken, err := c.GetAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("get access token error: %v", err)
@@ -57,7 +57,7 @@ func (c *Client) MsgSecCheck(content string) (*MsgSecCheckResponse, error) {
 
 	url := fmt.Sprintf(msgSecCheckURL, accessToken)
 
-	request := &MsgSecCheckRequest{
+	request := &MsgViolationCheckRequest{
 		Content: content,
 	}
 
@@ -81,7 +81,7 @@ func (c *Client) MsgSecCheck(content string) (*MsgSecCheckResponse, error) {
 
 	vlog.Infof("msg sec check response: %s", string(body))
 
-	var response MsgSecCheckResponse
+	var response MsgViolationCheckResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response error: %v", err)
 	}
@@ -97,7 +97,7 @@ func (c *Client) MsgSecCheck(content string) (*MsgSecCheckResponse, error) {
 // IsMsgContentSafe is a convenient method to check if content is safe.
 // Returns true if content is safe, false if content may have risks.
 func (c *Client) IsMsgContentSafe(content string) (bool, error) {
-	response, err := c.MsgSecCheck(content)
+	response, err := c.MsgViolationCheck(content)
 	if err != nil {
 		return false, err
 	}

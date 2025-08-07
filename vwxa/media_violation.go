@@ -33,21 +33,21 @@ const (
 )
 
 const (
-	MediaTypeAudio = 1 // 音频
-	MediaTypeImage = 2 // 图片
+	ViolationMediaTypeAudio = 1 // 音频
+	ViolationMediaTypeImage = 2 // 图片
 
-	SceneProfile = 1 // 资料
-	SceneComment = 2 // 评论
-	SceneForum   = 3 // 论坛
-	SceneSocial  = 4 // 社交日志
+	ViolationSceneProfile = 1 // 资料
+	ViolationSceneComment = 2 // 评论
+	ViolationSceneForum   = 3 // 论坛
+	ViolationSceneSocial  = 4 // 社交日志
 
-	SuggestRisky  = "risky"  // 风险
-	SuggestPass   = "pass"   // 通过
-	SuggestReview = "review" // 审核
+	ViolationSuggestRisky  = "risky"  // 风险
+	ViolationSuggestPass   = "pass"   // 通过
+	ViolationSuggestReview = "review" // 审核
 )
 
-// MediaCheckAsyncRequest represents a request for asynchronous media content security check.
-type MediaCheckAsyncRequest struct {
+// MediaViolationCheckAsyncRequest represents a request for asynchronous media content security check.
+type MediaViolationCheckAsyncRequest struct {
 	MediaURL  string `json:"media_url"`  // 要检测的图片或音频的url
 	MediaType int    `json:"media_type"` // 1:音频;2:图片
 	Version   int    `json:"version"`    // 接口版本号，2.0版本为固定值2
@@ -55,36 +55,36 @@ type MediaCheckAsyncRequest struct {
 	OpenID    string `json:"openid"`     // 用户的openid（用户需在近两小时访问过小程序）
 }
 
-// MediaCheckAsyncResponse represents the response from asynchronous media content security check.
-type MediaCheckAsyncResponse struct {
+// MediaViolationCheckAsyncResponse represents the response from asynchronous media content security check.
+type MediaViolationCheckAsyncResponse struct {
 	ErrCode int    `json:"errcode"`  // 错误码
 	ErrMsg  string `json:"errmsg"`   // 错误信息
 	TraceID string `json:"trace_id"` // 唯一请求标识，标记单次请求，用于匹配异步推送结果
 }
 
-// MediaCheckCallbackResult represents the callback result data structure for asynchronous detection.
-type MediaCheckCallbackResult struct {
-	ToUserName   string                    `json:"ToUserName"`   // 小程序的username
-	FromUserName string                    `json:"FromUserName"` // 平台推送服务UserName
-	CreateTime   int64                     `json:"CreateTime"`   // 发送时间
-	MsgType      string                    `json:"MsgType"`      // 默认为：event
-	Event        string                    `json:"Event"`        // 默认为：wxa_media_check
-	AppID        string                    `json:"appid"`        // 小程序的appid
-	TraceID      string                    `json:"trace_id"`     // 任务id
-	Version      int                       `json:"version"`      // 可用于区分接口版本
-	ErrCode      int                       `json:"errcode"`      // 错误码，仅当该值为0时，结果有效
-	Result       *MediaCheckResult         `json:"result"`       // 综合结果
-	Detail       []*MediaCheckDetailResult `json:"detail"`       // 详细检测结果
+// MediaViolationCheckCallbackResult represents the callback result data structure for asynchronous detection.
+type MediaViolationCheckCallbackResult struct {
+	ToUserName   string                             `json:"ToUserName"`   // 小程序的username
+	FromUserName string                             `json:"FromUserName"` // 平台推送服务UserName
+	CreateTime   int64                              `json:"CreateTime"`   // 发送时间
+	MsgType      string                             `json:"MsgType"`      // 默认为：event
+	Event        string                             `json:"Event"`        // 默认为：wxa_media_check
+	AppID        string                             `json:"appid"`        // 小程序的appid
+	TraceID      string                             `json:"trace_id"`     // 任务id
+	Version      int                                `json:"version"`      // 可用于区分接口版本
+	ErrCode      int                                `json:"errcode"`      // 错误码，仅当该值为0时，结果有效
+	Result       *MediaViolationCheckResult         `json:"result"`       // 综合结果
+	Detail       []*MediaViolationCheckDetailResult `json:"detail"`       // 详细检测结果
 }
 
-// MediaCheckResult represents the comprehensive detection result.
-type MediaCheckResult struct {
+// MediaViolationCheckResult represents the comprehensive detection result.
+type MediaViolationCheckResult struct {
 	Suggest string `json:"suggest"` // 建议，有risky、pass、review三种值
 	Label   int    `json:"label"`   // 命中标签枚举值，100 正常；20001 时政；20002 色情；20006 违法犯罪；21000 其他
 }
 
-// MediaCheckDetailResult represents the detailed detection result.
-type MediaCheckDetailResult struct {
+// MediaViolationCheckDetailResult represents the detailed detection result.
+type MediaViolationCheckDetailResult struct {
 	Strategy string `json:"strategy"` // 策略类型
 	ErrCode  int    `json:"errcode"`  // 错误码，仅当该值为0时，该项结果有效
 	Suggest  string `json:"suggest"`  // 建议，有risky、pass、review三种值
@@ -92,8 +92,8 @@ type MediaCheckDetailResult struct {
 	Prob     int    `json:"prob"`     // 0-100，代表置信度，越高代表越有可能属于当前返回的标签（label）
 }
 
-// ViolationInfo represents information about content violation.
-type ViolationInfo struct {
+// MediaViolationInfo represents information about content violation.
+type MediaViolationInfo struct {
 	IsViolation bool   `json:"is_violation"` // 是否违规
 	Reason      string `json:"reason"`       // 违规原因
 	Label       int    `json:"label"`        // 违规标签
@@ -106,7 +106,7 @@ type ViolationInfo struct {
 // scene: Scene enumeration value (1 profile, 2 comment, 3 forum, 4 social log)
 // openID: User's openid (user must have accessed the mini program within the last two hours)
 // Rate limit: single appId call limit is 2000 times/minute, 200,000 times/day; file size limit: single file size not exceeding 10M
-func (c *Client) MediaCheckAsync(mediaURL string, mediaType, scene int, openID string) (*MediaCheckAsyncResponse, error) {
+func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
 	accessToken, err := c.GetAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("get access token error: %v", err)
@@ -114,7 +114,7 @@ func (c *Client) MediaCheckAsync(mediaURL string, mediaType, scene int, openID s
 
 	url := fmt.Sprintf(mediaCheckAsyncURL, accessToken)
 
-	request := &MediaCheckAsyncRequest{
+	request := &MediaViolationCheckAsyncRequest{
 		MediaURL:  mediaURL,
 		MediaType: mediaType,
 		Version:   2, // 2.0版本固定值
@@ -142,7 +142,7 @@ func (c *Client) MediaCheckAsync(mediaURL string, mediaType, scene int, openID s
 
 	vlog.Infof("media check async response: %s", string(body))
 
-	var response MediaCheckAsyncResponse
+	var response MediaViolationCheckAsyncResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response error: %v", err)
 	}
@@ -155,8 +155,8 @@ func (c *Client) MediaCheckAsync(mediaURL string, mediaType, scene int, openID s
 }
 
 // ParseMediaCheckCallback parses the asynchronous callback result of multimedia content security detection.
-func (c *Client) ParseMediaCheckCallback(callbackData []byte) (*MediaCheckCallbackResult, error) {
-	var result MediaCheckCallbackResult
+func (c *Client) ParseMediaCheckCallback(callbackData []byte) (*MediaViolationCheckCallbackResult, error) {
+	var result MediaViolationCheckCallbackResult
 	if err := json.Unmarshal(callbackData, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal callback data error: %v", err)
 	}
@@ -165,8 +165,8 @@ func (c *Client) ParseMediaCheckCallback(callbackData []byte) (*MediaCheckCallba
 }
 
 // CheckMediaViolation determines whether multimedia content violates regulations and returns violation description.
-func (c *Client) CheckMediaViolation(result *MediaCheckCallbackResult) *ViolationInfo {
-	violationInfo := &ViolationInfo{
+func (c *Client) CheckMediaViolation(result *MediaViolationCheckCallbackResult) *MediaViolationInfo {
+	violationInfo := &MediaViolationInfo{
 		IsViolation: false,
 		Reason:      "内容正常",
 		Label:       100,
@@ -186,13 +186,13 @@ func (c *Client) CheckMediaViolation(result *MediaCheckCallbackResult) *Violatio
 		violationInfo.Suggest = result.Result.Suggest
 
 		switch result.Result.Suggest {
-		case SuggestRisky:
+		case ViolationSuggestRisky:
 			violationInfo.IsViolation = true
 			violationInfo.Reason = c.getLabelDescription(result.Result.Label)
-		case SuggestReview:
+		case ViolationSuggestReview:
 			violationInfo.IsViolation = true
 			violationInfo.Reason = fmt.Sprintf("内容需要人工审核：%s", c.getLabelDescription(result.Result.Label))
-		case SuggestPass:
+		case ViolationSuggestPass:
 			violationInfo.IsViolation = false
 			violationInfo.Reason = "内容正常"
 		}
@@ -233,11 +233,11 @@ func (c *Client) getLabelDescription(label int) string {
 }
 
 // CheckImageAsync is a convenient method for asynchronous image content security detection.
-func (c *Client) CheckImageAsync(imageURL string, scene int, openID string) (*MediaCheckAsyncResponse, error) {
-	return c.MediaCheckAsync(imageURL, 2, scene, openID)
+func (c *Client) CheckImageAsync(imageURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
+	return c.MediaViolationCheckAsync(imageURL, 2, scene, openID)
 }
 
 // CheckAudioAsync is a convenient method for asynchronous audio content security detection.
-func (c *Client) CheckAudioAsync(audioURL string, scene int, openID string) (*MediaCheckAsyncResponse, error) {
-	return c.MediaCheckAsync(audioURL, 1, scene, openID)
+func (c *Client) CheckAudioAsync(audioURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
+	return c.MediaViolationCheckAsync(audioURL, 1, scene, openID)
 }
