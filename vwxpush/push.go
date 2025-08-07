@@ -55,6 +55,15 @@ type EncryptedMessage struct {
 	Encrypt string `xml:"Encrypt" json:"Encrypt"`
 }
 
+// PushBaseInfo push base info
+type PushBaseInfo struct {
+	ToUserName   string `xml:"ToUserName" json:"ToUserName"`
+	FromUserName string `xml:"FromUserName" json:"FromUserName"`
+	CreateTime   int64  `xml:"CreateTime" json:"CreateTime"`
+	MsgType      string `xml:"MsgType" json:"MsgType"`
+	Event        string `xml:"Event" json:"Event"`
+}
+
 // HandlePushMessage handles WeChat message push
 // parameterFetcher: function to get URL parameters
 // body: request body data
@@ -63,7 +72,7 @@ type EncryptedMessage struct {
 func (c *WxPushReceiver) HandlePushMessage(
 	parameterFetcher func(name string) string,
 	body []byte,
-	handler func(string, []byte) ([]byte, error),
+	handler func(string, *PushBaseInfo, []byte) ([]byte, error),
 ) (_response []byte, _err error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -96,7 +105,7 @@ func (c *WxPushReceiver) HandlePushMessage(
 func (c *WxPushReceiver) handleEncryptedMessage(
 	msgSignature, timestamp, nonce string,
 	body []byte,
-	handler func(string, []byte) ([]byte, error),
+	handler func(string, *PushBaseInfo, []byte) ([]byte, error),
 ) ([]byte, error) {
 	// Parse encrypted message
 	var encryptedMsg EncryptedMessage
@@ -122,10 +131,16 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 		return nil, fmt.Errorf("decrypt message failed: %v", err)
 	}
 
-	vlog.Infof("decrypted message: %s, appid: %s", string(decryptedData), appid)
+	vlog.Infof("push message, appid: %s, message: %s", appid, string(decryptedData))
+
+	// Parse base info
+	baseInfo, err := c.parseBaseInfo(decryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("parse base info failed: %v", err)
+	}
 
 	// Call business processing function
-	responseData, err := handler(appid, decryptedData)
+	responseData, err := handler(appid, baseInfo, decryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("handler failed: %v", err)
 	}
@@ -138,11 +153,28 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 	return c.encryptResponse(appid, responseData)
 }
 
+func (c *WxPushReceiver) parseBaseInfo(decryptedData []byte) (*PushBaseInfo, error) {
+	var pushMsg PushBaseInfo
+
+	if c.DataType == "json" {
+		if err := json.Unmarshal(decryptedData, &pushMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
+		}
+	} else {
+		// Default XML format
+		if err := xml.Unmarshal(decryptedData, &pushMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
+		}
+	}
+
+	return &pushMsg, nil
+}
+
 // handlePlainMessage handles plain text messages
 func (c *WxPushReceiver) handlePlainMessage(
 	signature, timestamp, nonce string,
 	body []byte,
-	handler func(string, []byte) ([]byte, error),
+	handler func(string, *PushBaseInfo, []byte) ([]byte, error),
 ) ([]byte, error) {
 	// Verify signature
 	if !c.verifySignature(c.Token, timestamp, nonce, signature) {
@@ -151,8 +183,14 @@ func (c *WxPushReceiver) handlePlainMessage(
 
 	vlog.Infof("plain message: %s", string(body))
 
+	// Parse base info
+	baseInfo, err := c.parseBaseInfo(body)
+	if err != nil {
+		return nil, fmt.Errorf("parse base info failed: %v", err)
+	}
+
 	// Call business processing function
-	responseData, err := handler("", body)
+	responseData, err := handler("", baseInfo, body)
 	if err != nil {
 		return nil, fmt.Errorf("handler failed: %v", err)
 	}
