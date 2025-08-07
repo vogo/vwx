@@ -40,6 +40,10 @@ const (
 	SceneComment = 2 // 评论
 	SceneForum   = 3 // 论坛
 	SceneSocial  = 4 // 社交日志
+
+	SuggestRisky  = "risky"  // 风险
+	SuggestPass   = "pass"   // 通过
+	SuggestReview = "review" // 审核
 )
 
 // MediaCheckAsyncRequest represents a request for asynchronous media content security check.
@@ -182,13 +186,13 @@ func (c *Client) CheckMediaViolation(result *MediaCheckCallbackResult) *Violatio
 		violationInfo.Suggest = result.Result.Suggest
 
 		switch result.Result.Suggest {
-		case "risky":
+		case SuggestRisky:
 			violationInfo.IsViolation = true
 			violationInfo.Reason = c.getLabelDescription(result.Result.Label)
-		case "review":
+		case SuggestReview:
 			violationInfo.IsViolation = true
 			violationInfo.Reason = fmt.Sprintf("内容需要人工审核：%s", c.getLabelDescription(result.Result.Label))
-		case "pass":
+		case SuggestPass:
 			violationInfo.IsViolation = false
 			violationInfo.Reason = "内容正常"
 		}
