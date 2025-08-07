@@ -20,16 +20,21 @@ package vwxpush
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/vogo/vogo/vlog"
+	"github.com/vogo/vogo/vrand"
 )
 
 // WxPushReceiver WeChat message push receiver
@@ -54,7 +59,10 @@ func NewWxPushReceiver(appID, token, encodingAESKey, securityMode, dataType stri
 
 // EncryptedMessage encrypted message structure
 type EncryptedMessage struct {
-	Encrypt string `xml:"Encrypt" json:"Encrypt"`
+	Encrypt      string `xml:"Encrypt" json:"Encrypt"`
+	MsgSignature string `xml:"MsgSignature" json:"MsgSignature"`
+	TimeStamp    int64  `xml:"TimeStamp" json:"TimeStamp"`
+	Nonce        string `xml:"Nonce" json:"Nonce"`
 }
 
 // PushBaseInfo push base info
@@ -324,63 +332,79 @@ func (c *WxPushReceiver) decryptMessage(encryptedData string) ([]byte, string, e
 
 // encryptResponse encrypts response data
 func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) ([]byte, error) {
-	// Generate random string (16 bytes)
+	// Generate 16 bytes random string
 	randomBytes := make([]byte, 16)
-	for i := range randomBytes {
-		randomBytes[i] = byte(i) // Simple random number generation, should use crypto/rand in actual applications
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return nil, fmt.Errorf("generate random bytes failed: %v", err)
 	}
 
-	// Construct message: random string(16) + message length(4) + message content + AppID
+	// Construct message: random(16B) + msg_len(4B) + msg + appid
 	msgLen := len(responseData)
-	lengthBytes := []byte{
-		byte(msgLen >> 24),
-		byte(msgLen >> 16),
-		byte(msgLen >> 8),
-		byte(msgLen),
-	}
+	lengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(lengthBytes, uint32(msgLen)) // Network byte order
 
-	plainText := append(randomBytes, lengthBytes...)
-	plainText = append(plainText, responseData...)
-	plainText = append(plainText, []byte(appID)...)
+	// Construct FullStr
+	fullStr := make([]byte, 0, 16+4+len(responseData)+len(appID))
+	fullStr = append(fullStr, randomBytes...)
+	fullStr = append(fullStr, lengthBytes...)
+	fullStr = append(fullStr, responseData...)
+	fullStr = append(fullStr, []byte(appID)...)
 
 	// PKCS#7 padding
-	plainText = pkcs7Pad(plainText, aes.BlockSize)
+	paddedData := pkcs7Pad(fullStr, aes.BlockSize)
 
-	// Decode AES key
+	// Decode AES key: Base64_Decode(EncodingAESKey + "=")
 	aesKey, err := base64.StdEncoding.DecodeString(c.EncodingAESKey + "=")
 	if err != nil {
 		return nil, fmt.Errorf("decode aes key failed: %v", err)
 	}
 
-	// AES encrypt
+	// Create AES cipher
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return nil, fmt.Errorf("create aes cipher failed: %v", err)
 	}
 
-	// Generate IV
-	iv := make([]byte, aes.BlockSize)
-	for i := range iv {
-		iv[i] = byte(i) // Simple IV generation, should use crypto/rand in actual applications
-	}
+	// Use the first 16 bytes of random string as IV for CBC mode
+	iv := randomBytes
 
-	cipherText := make([]byte, len(plainText))
+	// AES encrypt using CBC mode
+	cipherText := make([]byte, len(paddedData))
 	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(cipherText, plainText)
+	mode.CryptBlocks(cipherText, paddedData)
 
-	// Concatenate IV and ciphertext
-	encryptedData := append(iv, cipherText...)
+	// Base64 encode the encrypted data
+	encryptStr := base64.StdEncoding.EncodeToString(cipherText)
 
-	// Base64 encode
-	encryptedStr := base64.StdEncoding.EncodeToString(encryptedData)
+	// Generate timestamp
+	timeStamp := time.Now().Unix()
+
+	// Generate nonce (use random string)
+	nonce := vrand.RandomString("0123456789", 9) // 9 digit random number
+
+	// Generate MsgSignature: SHA1(sort([token, timestamp, nonce, encrypt]))
+	timeStampStr := strconv.FormatInt(timeStamp, 10)
+	signatureParams := []string{c.Token, timeStampStr, nonce, encryptStr}
+	sort.Strings(signatureParams)
+	signatureStr := strings.Join(signatureParams, "")
+	h := sha1.New()
+	h.Write([]byte(signatureStr))
+	msgSignature := fmt.Sprintf("%x", h.Sum(nil))
+
+	// Create response message
+	response := EncryptedMessage{
+		Encrypt:      encryptStr,
+		MsgSignature: msgSignature,
+		TimeStamp:    timeStamp,
+		Nonce:        nonce,
+	}
 
 	// Return according to data format
 	if c.DataType == "json" {
-		response := EncryptedMessage{Encrypt: encryptedStr}
 		return json.Marshal(response)
 	} else {
 		// Default XML format
-		response := EncryptedMessage{Encrypt: encryptedStr}
 		return xml.Marshal(response)
 	}
 }
