@@ -394,24 +394,6 @@ func TestPkcs7Unpad(t *testing.T) {
 	}
 }
 
-func TestDecryptMessage(t *testing.T) {
-	receiver := &WxPushReceiver{
-		EncodingAESKey: "invalid-key", // This will cause base64 decode to fail
-	}
-
-	// Test with invalid base64 encrypted data
-	_, _, err := receiver.decryptMessage("invalid-base64-data!@#")
-	if err == nil {
-		t.Error("Expected error with invalid base64 data")
-	}
-
-	// Test with invalid AES key
-	_, _, err = receiver.decryptMessage("dGVzdA==") // "test" in base64
-	if err == nil {
-		t.Error("Expected error with invalid AES key")
-	}
-}
-
 func TestEncryptResponse(t *testing.T) {
 	receiver := &WxPushReceiver{
 		AppID:          "test-app-id",

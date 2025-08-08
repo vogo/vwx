@@ -298,8 +298,7 @@ func (c *WxPushReceiver) decryptMessage(encryptedData string) ([]byte, string, e
 		return nil, "", fmt.Errorf("decrypted data too short")
 	}
 
-	// Skip 16-byte random string
-	content := cipherText[16:]
+	content := cipherText
 
 	// Read message length (4 bytes, network byte order)
 	if len(content) < 4 {
@@ -367,13 +366,8 @@ func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) (*En
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(cipherText, paddedData)
 
-	// Prepend IV to cipher text for decryption
-	finalCipherText := make([]byte, len(iv)+len(cipherText))
-	copy(finalCipherText, iv)
-	copy(finalCipherText[len(iv):], cipherText)
-
-	// Base64 encode the encrypted data (IV + cipherText)
-	encryptStr := base64.StdEncoding.EncodeToString(finalCipherText)
+	// Base64 encode the encrypted data (cipherText)
+	encryptStr := base64.StdEncoding.EncodeToString(cipherText)
 
 	// Generate timestamp
 	timeStamp := time.Now().Unix()
