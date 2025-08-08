@@ -57,8 +57,8 @@ func NewWxPushReceiver(appID, token, encodingAESKey, securityMode, dataType stri
 	}
 }
 
-// EncryptedMessage encrypted message structure
-type EncryptedMessage struct {
+// EncryptedResponse encrypted message structure
+type EncryptedResponse struct {
 	Encrypt      string `xml:"Encrypt" json:"Encrypt"`
 	MsgSignature string `xml:"MsgSignature" json:"MsgSignature"`
 	TimeStamp    int64  `xml:"TimeStamp" json:"TimeStamp"`
@@ -122,11 +122,16 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 	}
 
 	if len(body) == 0 {
-		return c.encryptResponse(c.AppID, []byte("success"))
+		response, err := c.encryptResponse(c.AppID, []byte("success"))
+		if err != nil {
+			return nil, fmt.Errorf("encrypt response failed: %v", err)
+		}
+
+		return c.marshal(response)
 	}
 
 	// Parse encrypted message
-	var encryptedMsg EncryptedMessage
+	var encryptedMsg EncryptedResponse
 	if c.DataType == "json" {
 		if err := json.Unmarshal(body, &encryptedMsg); err != nil {
 			return nil, fmt.Errorf("unmarshal encrypted message failed: %v", err)
@@ -172,24 +177,12 @@ func (c *WxPushReceiver) handleEncryptedMessage(
 		responseData = []byte("success")
 	}
 
-	return c.encryptResponse(appid, responseData)
-}
-
-func (c *WxPushReceiver) parseBaseInfo(decryptedData []byte) (*PushBaseInfo, error) {
-	var pushMsg PushBaseInfo
-
-	if c.DataType == "json" {
-		if err := json.Unmarshal(decryptedData, &pushMsg); err != nil {
-			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
-		}
-	} else {
-		// Default XML format
-		if err := xml.Unmarshal(decryptedData, &pushMsg); err != nil {
-			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
-		}
+	response, err := c.encryptResponse(appid, responseData)
+	if err != nil {
+		return nil, fmt.Errorf("encrypt response failed: %v", err)
 	}
 
-	return &pushMsg, nil
+	return c.marshal(response)
 }
 
 // handlePlainMessage handles plain text messages
@@ -331,7 +324,7 @@ func (c *WxPushReceiver) decryptMessage(encryptedData string) ([]byte, string, e
 }
 
 // encryptResponse encrypts response data
-func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) ([]byte, error) {
+func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) (*EncryptedResponse, error) {
 	// Generate 16 bytes random string
 	randomBytes := make([]byte, 16)
 	_, err := rand.Read(randomBytes)
@@ -374,8 +367,13 @@ func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) ([]b
 	mode := cipher.NewCBCEncrypter(block, iv)
 	mode.CryptBlocks(cipherText, paddedData)
 
-	// Base64 encode the encrypted data
-	encryptStr := base64.StdEncoding.EncodeToString(cipherText)
+	// Prepend IV to cipher text for decryption
+	finalCipherText := make([]byte, len(iv)+len(cipherText))
+	copy(finalCipherText, iv)
+	copy(finalCipherText[len(iv):], cipherText)
+
+	// Base64 encode the encrypted data (IV + cipherText)
+	encryptStr := base64.StdEncoding.EncodeToString(finalCipherText)
 
 	// Generate timestamp
 	timeStamp := time.Now().Unix()
@@ -393,18 +391,39 @@ func (c *WxPushReceiver) encryptResponse(appID string, responseData []byte) ([]b
 	msgSignature := fmt.Sprintf("%x", h.Sum(nil))
 
 	// Create response message
-	response := EncryptedMessage{
+	response := EncryptedResponse{
 		Encrypt:      encryptStr,
 		MsgSignature: msgSignature,
 		TimeStamp:    timeStamp,
 		Nonce:        nonce,
 	}
 
-	// Return according to data format
+	return &response, nil
+}
+
+func (c *WxPushReceiver) parseBaseInfo(decryptedData []byte) (*PushBaseInfo, error) {
+	var pushMsg PushBaseInfo
+
 	if c.DataType == "json" {
-		return json.Marshal(response)
+		if err := json.Unmarshal(decryptedData, &pushMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
+		}
 	} else {
 		// Default XML format
-		return xml.Marshal(response)
+		if err := xml.Unmarshal(decryptedData, &pushMsg); err != nil {
+			return nil, fmt.Errorf("unmarshal push message failed: %v", err)
+		}
+	}
+
+	return &pushMsg, nil
+}
+
+func (c *WxPushReceiver) marshal(obj any) ([]byte, error) {
+	// Return according to data format
+	if c.DataType == "json" {
+		return json.Marshal(obj)
+	} else {
+		// Default XML format
+		return xml.Marshal(obj)
 	}
 }

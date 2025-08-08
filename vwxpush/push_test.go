@@ -19,13 +19,13 @@ package vwxpush
 
 import (
 	"bytes"
-	"encoding/json"
-	"encoding/xml"
 	"fmt"
 	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/vogo/vogo/vstrconv"
 )
 
 func TestNewWxPushReceiver(t *testing.T) {
@@ -433,20 +433,13 @@ func TestEncryptResponse(t *testing.T) {
 	timeBefore := time.Now().Unix()
 
 	// Test XML format
-	response, err := receiver.encryptResponse("test-app-id", []byte("test response"))
+	encMsg, err := receiver.encryptResponse("test-app-id", []byte("test response"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
 	// Record time after encryption
 	timeAfter := time.Now().Unix()
-
-	// Verify it's valid XML
-	var encMsg EncryptedMessage
-	err = xml.Unmarshal(response, &encMsg)
-	if err != nil {
-		t.Errorf("Failed to unmarshal encrypted XML response: %v", err)
-	}
 
 	// Verify all required fields are present and valid
 	if encMsg.Encrypt == "" {
@@ -475,15 +468,9 @@ func TestEncryptResponse(t *testing.T) {
 
 	// Test JSON format
 	receiver.DataType = "json"
-	response, err = receiver.encryptResponse("test-app-id", []byte("test response"))
+	encMsg, err = receiver.encryptResponse("test-app-id", []byte("test response"))
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	// Verify it's valid JSON
-	err = json.Unmarshal(response, &encMsg)
-	if err != nil {
-		t.Errorf("Failed to unmarshal encrypted JSON response: %v", err)
 	}
 
 	// Verify all required fields are present for JSON format
@@ -504,27 +491,54 @@ func TestEncryptResponse(t *testing.T) {
 	}
 
 	// Test that different calls produce different nonces (randomness check)
-	response1, err1 := receiver.encryptResponse("test-app-id", []byte("same message"))
-	response2, err2 := receiver.encryptResponse("test-app-id", []byte("same message"))
-	
+	msg1, err1 := receiver.encryptResponse("test-app-id", []byte("same message"))
+	msg2, err2 := receiver.encryptResponse("test-app-id", []byte("same message"))
+
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Unexpected errors: %v, %v", err1, err2)
 	}
-	
-	var msg1, msg2 EncryptedMessage
-	json.Unmarshal(response1, &msg1)
-	json.Unmarshal(response2, &msg2)
-	
+
 	// At minimum, nonces should be different due to randomness
 	if msg1.Nonce == msg2.Nonce {
 		t.Error("Expected different nonces for different calls")
 	}
-	
+
 	// Timestamps should be close but may be the same if calls are very fast
 	if msg1.TimeStamp != msg2.TimeStamp {
 		t.Logf("Different timestamps: %d vs %d", msg1.TimeStamp, msg2.TimeStamp)
 	}
-	
+
 	// Note: Encrypted data may occasionally be the same due to timing,
 	// but nonces should always be different due to random generation
+}
+
+func TestEncryptAndDecrypt(t *testing.T) {
+	receiver := &WxPushReceiver{
+		AppID:          "test-app-id",
+		Token:          "01234567800123456780012345678001",
+		EncodingAESKey: "0123456780012345678001234567800123456780012", // 43 chars
+		DataType:       "xml",
+	}
+
+	encMsg, err := receiver.encryptResponse(receiver.AppID, []byte("test response"))
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if !receiver.verifyMsgSignature(receiver.Token, vstrconv.I64toa(encMsg.TimeStamp), encMsg.Nonce, encMsg.Encrypt, encMsg.MsgSignature) {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	decryptedData, appid, err := receiver.decryptMessage(encMsg.Encrypt)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if string(decryptedData) != "test response" {
+		t.Errorf("Expected 'test response', got '%s'", string(decryptedData))
+	}
+
+	if appid != "test-app-id" {
+		t.Errorf("Expected 'test-app-id', got '%s'", appid)
+	}
 }
