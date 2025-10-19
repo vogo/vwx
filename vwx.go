@@ -15,4 +15,5 @@
  * limitations under the License.
  */
 
+// Package vwx provides WeChat Mini Program and WeChat Push APIs.
 package vwx

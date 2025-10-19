@@ -48,7 +48,11 @@ func (c *Client) GetSessionKey(code string) (*SessionResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			vlog.Errorf("failed to close response body: %v", closeErr)
+		}
+	}()
 
 	var result SessionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

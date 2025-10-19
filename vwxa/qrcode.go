@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/vogo/vogo/vlog"
 )
 
 const (
@@ -53,7 +55,11 @@ func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			vlog.Errorf("failed to close response body: %v", closeErr)
+		}
+	}()
 
 	return io.ReadAll(resp.Body)
 }

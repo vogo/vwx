@@ -73,7 +73,11 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 	if err != nil {
 		return nil, fmt.Errorf("send request error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			vlog.Errorf("failed to close response body: %v", closeErr)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
