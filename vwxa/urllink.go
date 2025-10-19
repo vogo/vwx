@@ -78,6 +78,8 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 		return nil, err
 	}
 
+	vlog.Infof("generate urllink request: %s", string(jsonData))
+
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, err
@@ -92,6 +94,8 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	vlog.Infof("generate urllink response: %s", string(body))
 
 	var result URLLinkResponse
 	if err := json.Unmarshal(body, &result); err != nil {
