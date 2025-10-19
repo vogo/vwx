@@ -58,6 +58,19 @@ type URLLinkResponse struct {
 	URLLink string `json:"url_link"`
 }
 
+func (c *Client) marshalRequest(req *URLLinkRequest) ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	if jsonErr := encoder.Encode(req); jsonErr != nil {
+		return nil, jsonErr
+	}
+	// Remove the trailing newline added by Encode
+	jsonData := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+
+	return jsonData, nil
+}
+
 // GenerateURLLink generates a URL Link for WeChat Mini Program.
 // 获取小程序 URL Link，适用于短信、邮件、网页、微信内等拉起小程序的业务场景
 func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) {
@@ -73,7 +86,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 		req.EnvVersion = c.envVersion
 	}
 
-	jsonData, err := json.Marshal(req)
+	jsonData, err := c.marshalRequest(req)
 	if err != nil {
 		return nil, err
 	}
