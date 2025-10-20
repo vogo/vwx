@@ -19,14 +19,17 @@ package vwxa
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLinkRequest(t *testing.T) {
+	path := "/test"
+	query := "a=1&b=2"
 	req := &URLLinkRequest{
-		Path:  "/test",
-		Query: "a=1&b=2",
+		Path:  &path,
+		Query: &query,
 	}
 
 	c := NewClient("appid", "secret")
@@ -39,4 +42,19 @@ func TestLinkRequest(t *testing.T) {
 	t.Logf("request body: %s", string(body))
 
 	assert.Equal(t, string(body), `{"path":"/test","query":"a=1&b=2"}`)
+}
+
+func TestGenerateExpirableURLLinkWithTimeType(t *testing.T) {
+	c := NewClient("test_appid", "test_secret")
+
+	// Test that the function accepts time.Time parameter
+	expireTime := time.Now().Add(24 * time.Hour)
+
+	// This would normally make an HTTP request, but we're just testing the parameter type
+	// In a real test environment, you'd mock the HTTP client
+	_, err := c.GenerateExpirableURLLink("/pages/test", "param=value", expireTime)
+
+	// We expect an error because we don't have valid credentials, but the important thing
+	// is that the function accepts time.Time parameter without compilation errors
+	assert.Error(t, err) // This will fail due to invalid credentials, which is expected
 }

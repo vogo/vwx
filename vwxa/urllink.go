@@ -23,6 +23,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/vogo/vogo/vlog"
 )
@@ -33,13 +34,13 @@ const (
 
 // URLLinkRequest represents the request parameters for generating URL Link.
 type URLLinkRequest struct {
-	Path           string     `json:"path,omitempty"`            // 小程序页面路径
-	Query          string     `json:"query,omitempty"`           // 小程序页面query参数
-	ExpireType     int        `json:"expire_type,omitempty"`     // 失效类型：0-到期失效，1-失效间隔天数
-	ExpireTime     int64      `json:"expire_time,omitempty"`     // 到期失效的Unix时间戳
-	ExpireInterval int        `json:"expire_interval,omitempty"` // 失效间隔天数
+	Path           *string    `json:"path,omitempty"`            // 小程序页面路径
+	Query          *string    `json:"query,omitempty"`           // 小程序页面query参数
+	ExpireType     *int       `json:"expire_type,omitempty"`     // 失效类型：0-到期失效，1-失效间隔天数
+	ExpireTime     *int64     `json:"expire_time,omitempty"`     // 到期失效的Unix时间戳
+	ExpireInterval *int       `json:"expire_interval,omitempty"` // 失效间隔天数
 	CloudBase      *CloudBase `json:"cloud_base,omitempty"`      // 云开发静态网站配置
-	EnvVersion     string     `json:"env_version,omitempty"`     // 小程序版本
+	EnvVersion     *string    `json:"env_version,omitempty"`     // 小程序版本
 }
 
 // CloudBase represents the cloud development static website configuration.
@@ -82,8 +83,9 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 	url := generateURLLinkURL + accessToken
 
 	// Set default env_version if not provided
-	if req.EnvVersion == "" {
-		req.EnvVersion = c.envVersion
+	if req.EnvVersion == nil {
+		envVersion := c.envVersion
+		req.EnvVersion = &envVersion
 	}
 
 	jsonData, err := c.marshalRequest(req)
@@ -126,8 +128,8 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 // 简化版本的URL Link生成，只需要提供基本参数
 func (c *Client) GenerateSimpleURLLink(path, query string) (string, error) {
 	req := &URLLinkRequest{
-		Path:  path,
-		Query: query,
+		Path:  &path,
+		Query: &query,
 	}
 
 	resp, err := c.GenerateURLLink(req)
@@ -140,12 +142,14 @@ func (c *Client) GenerateSimpleURLLink(path, query string) (string, error) {
 
 // GenerateExpirableURLLink generates a URL Link with expiration time.
 // 生成带有过期时间的URL Link
-func (c *Client) GenerateExpirableURLLink(path, query string, expireTime int64) (string, error) {
+func (c *Client) GenerateExpirableURLLink(path, query string, expireTime time.Time) (string, error) {
+	expireType := 0
+	expireTimeUnix := expireTime.Unix()
 	req := &URLLinkRequest{
-		Path:       path,
-		Query:      query,
-		ExpireType: 0, // 到期失效
-		ExpireTime: expireTime,
+		Path:       &path,
+		Query:      &query,
+		ExpireType: &expireType, // 到期失效
+		ExpireTime: &expireTimeUnix,
 	}
 
 	resp, err := c.GenerateURLLink(req)
@@ -158,12 +162,13 @@ func (c *Client) GenerateExpirableURLLink(path, query string, expireTime int64) 
 
 // GenerateIntervalURLLink generates a URL Link with expiration interval in days.
 // 生成带有失效间隔天数的URL Link
-func (c *Client) GenerateIntervalURLLink(path, query string, expireInterval int) (string, error) {
+func (c *Client) GenerateIntervalURLLink(path, query string, expireIntervalDays int) (string, error) {
+	expireType := 1
 	req := &URLLinkRequest{
-		Path:           path,
-		Query:          query,
-		ExpireType:     1, // 失效间隔天数
-		ExpireInterval: expireInterval,
+		Path:           &path,
+		Query:          &query,
+		ExpireType:     &expireType, // 失效间隔天数
+		ExpireInterval: &expireIntervalDays,
 	}
 
 	resp, err := c.GenerateURLLink(req)
