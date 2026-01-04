@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vogo/vwx"
 )
 
 func TestURLSchemeRequest(t *testing.T) {
@@ -35,9 +36,10 @@ func TestURLSchemeRequest(t *testing.T) {
 		IsExpire: &isExpire,
 	}
 
-	c := NewClient("appid", "secret")
+	c := vwx.NewClient("appid", "secret")
+	svc := NewService(c)
 
-	body, err := c.marshalURLSchemeRequest(req)
+	body, err := svc.marshalURLSchemeRequest(req)
 	if err != nil {
 		t.Fatalf("failed to marshal request: %v", err)
 	}
@@ -63,9 +65,10 @@ func TestURLSchemeRequestWithExpire(t *testing.T) {
 		ExpireTime: &expireTime,
 	}
 
-	c := NewClient("appid", "secret")
+	c := vwx.NewClient("appid", "secret")
+	svc := NewService(c)
 
-	body, err := c.marshalURLSchemeRequest(req)
+	body, err := svc.marshalURLSchemeRequest(req)
 	if err != nil {
 		t.Fatalf("failed to marshal request: %v", err)
 	}
@@ -91,9 +94,10 @@ func TestURLSchemeRequestWithInterval(t *testing.T) {
 		ExpireInterval: &expireInterval,
 	}
 
-	c := NewClient("appid", "secret")
+	c := vwx.NewClient("appid", "secret")
+	svc := NewService(c)
 
-	body, err := c.marshalURLSchemeRequest(req)
+	body, err := svc.marshalURLSchemeRequest(req)
 	if err != nil {
 		t.Fatalf("failed to marshal request: %v", err)
 	}
@@ -105,14 +109,15 @@ func TestURLSchemeRequestWithInterval(t *testing.T) {
 }
 
 func TestGenerateExpirableURLSchemeWithTimeType(t *testing.T) {
-	c := NewClient("test_appid", "test_secret")
+	c := vwx.NewClient("test_appid", "test_secret")
+	svc := NewService(c)
 
 	// Test that the function accepts time.Time parameter
 	expireTime := time.Now().Add(24 * time.Hour)
 
 	// This would normally make an HTTP request, but we're just testing the parameter type
 	// In a real test environment, you'd mock the HTTP client
-	_, err := c.GenerateExpirableURLScheme("/pages/test", "param=value", expireTime)
+	_, err := svc.GenerateExpirableURLScheme("/pages/test", "param=value", expireTime)
 
 	// We expect an error because we don't have valid credentials, but the important thing
 	// is that the function accepts time.Time parameter without compilation errors

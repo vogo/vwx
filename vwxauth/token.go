@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package vwxa
+package vwxauth
 
 import (
 	"context"
@@ -33,20 +33,20 @@ const (
 	accessTokenURL = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s"
 )
 
-func (c *Client) cacheKeyAccessToken() string {
-	return c.cacheKeyPrefix + "vwxa:access_token:" + c.AppID
+func (c *Service) cacheKeyAccessToken() string {
+	return c.client.CacheKeyPrefix + "vwxa:access_token:" + c.client.AppID
 }
 
 // GetAccessToken retrieves access token from WeChat API with caching support.
-func (c *Client) GetAccessToken() (string, error) {
-	if c.cacheProvider != nil {
-		cachedToken := c.cacheProvider.Get(context.Background(), c.cacheKeyAccessToken())
+func (c *Service) GetAccessToken() (string, error) {
+	if c.client.CacheProvider != nil {
+		cachedToken := c.client.CacheProvider.Get(context.Background(), c.cacheKeyAccessToken())
 		if cachedToken != "" {
 			return cachedToken, nil
 		}
 	}
 
-	url := fmt.Sprintf(accessTokenURL, c.AppID, c.appSecret)
+	url := fmt.Sprintf(accessTokenURL, c.client.AppID, c.client.AppSecret)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -54,7 +54,7 @@ func (c *Client) GetAccessToken() (string, error) {
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -79,11 +79,11 @@ func (c *Client) GetAccessToken() (string, error) {
 	}
 
 	// cache access token
-	if c.cacheProvider != nil {
+	if c.client.CacheProvider != nil {
 		expireTime := time.Duration(result.ExpiresIn-300) * time.Second
-		if err := c.cacheProvider.Set(context.Background(),
+		if err := c.client.CacheProvider.Set(context.Background(),
 			c.cacheKeyAccessToken(), result.AccessToken, expireTime); err != nil {
-			vlog.Errorf("set access token to cache error: %v", err)
+			vlog.Errorf("failed to set access token to cache | err: %v", err)
 		}
 	}
 

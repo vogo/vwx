@@ -31,8 +31,8 @@ const (
 )
 
 // GenerateQRCode generates QR code for WeChat Mini Program with specified scene and page.
-func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) GenerateQRCode(scene, page string) ([]byte, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
 		"scene":       scene,
 		"page":        page,
 		"check_path":  false,
-		"env_version": c.envVersion,
+		"env_version": c.client.EnvVersion,
 	}
 
 	jsonData, err := json.Marshal(params)
@@ -57,7 +57,7 @@ func (c *Client) GenerateQRCode(scene, page string) ([]byte, error) {
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 

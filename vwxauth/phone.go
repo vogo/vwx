@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package vwxa
+package vwxauth
 
 import (
 	"crypto/aes"
@@ -43,7 +43,7 @@ type PhoneInfo struct {
 }
 
 // ParsePhoneEncryptedData parses and decrypts phone encrypted data from WeChat Mini Program.
-func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, *SessionResponse, error) {
+func (c *Service) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, *SessionResponse, error) {
 	var encData PhoneEncryptedData
 	err := json.Unmarshal(data, &encData)
 	if err != nil {
@@ -68,15 +68,15 @@ func (c *Client) ParsePhoneEncryptedData(data []byte) (*PhoneInfo, *SessionRespo
 }
 
 // DecryptPhoneNumber decrypts phone number using session key, encrypted data and IV.
-func (c *Client) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (_info *PhoneInfo, _err error) {
+func (c *Service) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (_info *PhoneInfo, _err error) {
 	defer func() {
 		if err := recover(); err != nil {
-			vlog.Errorf("decrypt phone number error: %v, stack: %s", err, debug.Stack())
+			vlog.Errorf("failed to decrypt phone number | err: %v | stack: %s", err, debug.Stack())
 			_err = fmt.Errorf("decrypt phone number error: %v", err)
 		}
 	}()
 
-	vlog.Infof("decrypt phone number: sessionKey=%s, encryptedData=%s, iv=%s",
+	vlog.Infof("decrypt phone number | sessionKey: %s | encryptedData: %s | iv: %s",
 		sessionKey, encryptedData, iv)
 
 	key, err := base64.StdEncoding.DecodeString(sessionKey)
@@ -105,7 +105,7 @@ func (c *Client) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (_info
 	// 处理 PKCS#7 填充
 	cipherText = pkcs7Unpad(cipherText)
 	if cipherText == nil {
-		vlog.Error("decrypt phone number error: unpad failed")
+		vlog.Errorf("failed to decrypt phone number | err: unpad failed")
 		return nil, fmt.Errorf("unpad failed")
 	}
 

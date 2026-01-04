@@ -59,7 +59,7 @@ type URLLinkResponse struct {
 	URLLink string `json:"url_link"`
 }
 
-func (c *Client) marshalRequest(req *URLLinkRequest) ([]byte, error) {
+func (c *Service) marshalRequest(req *URLLinkRequest) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
@@ -74,8 +74,8 @@ func (c *Client) marshalRequest(req *URLLinkRequest) ([]byte, error) {
 
 // GenerateURLLink generates a URL Link for WeChat Mini Program.
 // 获取小程序 URL Link，适用于短信、邮件、网页、微信内等拉起小程序的业务场景
-func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 
 	// Set default env_version if not provided
 	if req.EnvVersion == nil {
-		envVersion := c.envVersion
+		envVersion := c.client.EnvVersion
 		req.EnvVersion = &envVersion
 	}
 
@@ -93,7 +93,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 		return nil, err
 	}
 
-	vlog.Infof("generate urllink request: %s", string(jsonData))
+	vlog.Infof("generate urllink | req: %s", string(jsonData))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -101,7 +101,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -110,7 +110,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 		return nil, err
 	}
 
-	vlog.Infof("generate urllink response: %s", string(body))
+	vlog.Infof("generate urllink | resp: %s", string(body))
 
 	var result URLLinkResponse
 	if err := json.Unmarshal(body, &result); err != nil {
@@ -126,7 +126,7 @@ func (c *Client) GenerateURLLink(req *URLLinkRequest) (*URLLinkResponse, error) 
 
 // GenerateSimpleURLLink generates a simple URL Link with basic parameters.
 // 简化版本的URL Link生成，只需要提供基本参数
-func (c *Client) GenerateSimpleURLLink(path, query string) (string, error) {
+func (c *Service) GenerateSimpleURLLink(path, query string) (string, error) {
 	req := &URLLinkRequest{
 		Path:  &path,
 		Query: &query,
@@ -142,7 +142,7 @@ func (c *Client) GenerateSimpleURLLink(path, query string) (string, error) {
 
 // GenerateExpirableURLLink generates a URL Link with expiration time.
 // 生成带有过期时间的URL Link
-func (c *Client) GenerateExpirableURLLink(path, query string, expireTime time.Time) (string, error) {
+func (c *Service) GenerateExpirableURLLink(path, query string, expireTime time.Time) (string, error) {
 	expireType := 0
 	expireTimeUnix := expireTime.Unix()
 	req := &URLLinkRequest{
@@ -162,7 +162,7 @@ func (c *Client) GenerateExpirableURLLink(path, query string, expireTime time.Ti
 
 // GenerateIntervalURLLink generates a URL Link with expiration interval in days.
 // 生成带有失效间隔天数的URL Link
-func (c *Client) GenerateIntervalURLLink(path, query string, expireIntervalDays int) (string, error) {
+func (c *Service) GenerateIntervalURLLink(path, query string, expireIntervalDays int) (string, error) {
 	expireType := 1
 	req := &URLLinkRequest{
 		Path:           &path,

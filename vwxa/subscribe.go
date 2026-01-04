@@ -54,8 +54,8 @@ type SubscribeMessageResponse struct {
 }
 
 // SendSubscribeMessage sends a subscribe message to the specified user.
-func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*SubscribeMessageResponse, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) SendSubscribeMessage(request *SubscribeMessageRequest) (*SubscribeMessageResponse, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("get access token error: %v", err)
 	}
@@ -67,7 +67,7 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 		return nil, fmt.Errorf("marshal request error: %v", err)
 	}
 
-	vlog.Infof("send subscribe message request: %s", string(data))
+	vlog.Infof("send subscribe message | req: %s", string(data))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -75,7 +75,7 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -84,7 +84,7 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 		return nil, fmt.Errorf("read response error: %v", err)
 	}
 
-	vlog.Infof("send subscribe message response: %s", string(body))
+	vlog.Infof("send subscribe message | resp: %s", string(body))
 
 	var response SubscribeMessageResponse
 	if err := json.Unmarshal(body, &response); err != nil {
@@ -99,7 +99,7 @@ func (c *Client) SendSubscribeMessage(request *SubscribeMessageRequest) (*Subscr
 }
 
 // SendSubscribeMessageSimple is a convenient method to send a subscribe message with simple data.
-func (c *Client) SendSubscribeMessageSimple(openID, templateID, page string, data map[string]string) (*SubscribeMessageResponse, error) {
+func (c *Service) SendSubscribeMessageSimple(openID, templateID, page string, data map[string]string) (*SubscribeMessageResponse, error) {
 	// 构建数据项
 	dataItems := make(map[string]*SubscribeMessageDataItem)
 	for k, v := range data {

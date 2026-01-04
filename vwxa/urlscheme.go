@@ -57,8 +57,8 @@ type URLSchemeResponse struct {
 
 // GenerateURLScheme generates a URL Scheme for WeChat Mini Program.
 // 获取小程序scheme码，适用于短信、邮件、外部网页、微信内等拉起小程序的业务场景
-func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, e
 
 	// Set default env_version if not provided
 	if req.JumpWxa != nil && req.JumpWxa.EnvVersion == "" {
-		req.JumpWxa.EnvVersion = c.envVersion
+		req.JumpWxa.EnvVersion = c.client.EnvVersion
 	}
 
 	jsonData, err := c.marshalURLSchemeRequest(req)
@@ -75,7 +75,7 @@ func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, e
 		return nil, err
 	}
 
-	vlog.Infof("generate url scheme request: %s", string(jsonData))
+	vlog.Infof("generate url scheme | req: %s", string(jsonData))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -83,7 +83,7 @@ func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, e
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -92,7 +92,7 @@ func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, e
 		return nil, err
 	}
 
-	vlog.Infof("generate url scheme response: %s", string(body))
+	vlog.Infof("generate url scheme | resp: %s", string(body))
 
 	var result URLSchemeResponse
 	if err := json.Unmarshal(body, &result); err != nil {
@@ -106,7 +106,7 @@ func (c *Client) GenerateURLScheme(req *URLSchemeRequest) (*URLSchemeResponse, e
 	return &result, nil
 }
 
-func (c *Client) marshalURLSchemeRequest(req *URLSchemeRequest) ([]byte, error) {
+func (c *Service) marshalURLSchemeRequest(req *URLSchemeRequest) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
@@ -120,7 +120,7 @@ func (c *Client) marshalURLSchemeRequest(req *URLSchemeRequest) ([]byte, error) 
 }
 
 // GenerateSimpleURLScheme generates a simple URL Scheme with path and query.
-func (c *Client) GenerateSimpleURLScheme(path, query string) (string, error) {
+func (c *Service) GenerateSimpleURLScheme(path, query string) (string, error) {
 	isExpire := false
 	req := &URLSchemeRequest{
 		JumpWxa: &JumpWxa{
@@ -139,7 +139,7 @@ func (c *Client) GenerateSimpleURLScheme(path, query string) (string, error) {
 }
 
 // GenerateExpirableURLScheme generates a URL Scheme that expires at a specific time.
-func (c *Client) GenerateExpirableURLScheme(path, query string, expireTime time.Time) (string, error) {
+func (c *Service) GenerateExpirableURLScheme(path, query string, expireTime time.Time) (string, error) {
 	isExpire := true
 	expireType := 0
 	expireUnix := expireTime.Unix()
@@ -162,7 +162,7 @@ func (c *Client) GenerateExpirableURLScheme(path, query string, expireTime time.
 }
 
 // GenerateIntervalURLScheme generates a URL Scheme that expires after a specific number of days.
-func (c *Client) GenerateIntervalURLScheme(path, query string, expireIntervalDays int) (string, error) {
+func (c *Service) GenerateIntervalURLScheme(path, query string, expireIntervalDays int) (string, error) {
 	isExpire := true
 	expireType := 1
 	req := &URLSchemeRequest{

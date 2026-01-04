@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package vwxa
+package vwxauth
 
 import (
 	"encoding/json"
@@ -39,10 +39,10 @@ type SessionResponse struct {
 }
 
 // GetSessionKey retrieves session key from WeChat using authorization code.
-func (c *Client) GetSessionKey(code string) (*SessionResponse, error) {
-	vlog.Infof("get session key, appid=%s, code=%s", c.AppID, code)
+func (c *Service) GetSessionKey(code string) (*SessionResponse, error) {
+	vlog.Infof("get session key | appid: %s | code: %s", c.client.AppID, code)
 
-	url := fmt.Sprintf(jsCode2SessionURL, c.AppID, c.appSecret, code)
+	url := fmt.Sprintf(jsCode2SessionURL, c.client.AppID, c.client.AppSecret, code)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -50,7 +50,7 @@ func (c *Client) GetSessionKey(code string) (*SessionResponse, error) {
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 

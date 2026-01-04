@@ -106,8 +106,8 @@ type MediaViolationInfo struct {
 // scene: Scene enumeration value (1 profile, 2 comment, 3 forum, 4 social log)
 // openID: User's openid (user must have accessed the mini program within the last two hours)
 // Rate limit: single appId call limit is 2000 times/minute, 200,000 times/day; file size limit: single file size not exceeding 10M
-func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) MediaViolationCheckAsync(mediaURL string, mediaType, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("get access token error: %v", err)
 	}
@@ -127,7 +127,7 @@ func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int,
 		return nil, fmt.Errorf("marshal request error: %v", err)
 	}
 
-	vlog.Infof("media check async request: %s", string(data))
+	vlog.Infof("media check async | req: %s", string(data))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -135,7 +135,7 @@ func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int,
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -144,7 +144,7 @@ func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int,
 		return nil, fmt.Errorf("read response error: %v", err)
 	}
 
-	vlog.Infof("media check async response: %s", string(body))
+	vlog.Infof("media check async | resp: %s", string(body))
 
 	var response MediaViolationCheckAsyncResponse
 	if err := json.Unmarshal(body, &response); err != nil {
@@ -159,7 +159,7 @@ func (c *Client) MediaViolationCheckAsync(mediaURL string, mediaType, scene int,
 }
 
 // ParseMediaCheckCallback parses the asynchronous callback result of multimedia content security detection.
-func (c *Client) ParseMediaCheckCallback(callbackData []byte) (*MediaViolationCheckCallbackResult, error) {
+func (c *Service) ParseMediaCheckCallback(callbackData []byte) (*MediaViolationCheckCallbackResult, error) {
 	var result MediaViolationCheckCallbackResult
 	if err := json.Unmarshal(callbackData, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal callback data error: %v", err)
@@ -169,7 +169,7 @@ func (c *Client) ParseMediaCheckCallback(callbackData []byte) (*MediaViolationCh
 }
 
 // CheckMediaViolation determines whether multimedia content violates regulations and returns violation description.
-func (c *Client) CheckMediaViolation(result *MediaViolationCheckCallbackResult) *MediaViolationInfo {
+func (c *Service) CheckMediaViolation(result *MediaViolationCheckCallbackResult) *MediaViolationInfo {
 	violationInfo := &MediaViolationInfo{
 		IsViolation: false,
 		Reason:      "内容正常",
@@ -219,7 +219,7 @@ func (c *Client) CheckMediaViolation(result *MediaViolationCheckCallbackResult) 
 
 // 获取标签描述
 // getLabelDescription returns the description for a given label code.
-func (c *Client) getLabelDescription(label int) string {
+func (c *Service) getLabelDescription(label int) string {
 	switch label {
 	case 100:
 		return "正常内容"
@@ -237,11 +237,11 @@ func (c *Client) getLabelDescription(label int) string {
 }
 
 // CheckImageAsync is a convenient method for asynchronous image content security detection.
-func (c *Client) CheckImageAsync(imageURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
+func (c *Service) CheckImageAsync(imageURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
 	return c.MediaViolationCheckAsync(imageURL, 2, scene, openID)
 }
 
 // CheckAudioAsync is a convenient method for asynchronous audio content security detection.
-func (c *Client) CheckAudioAsync(audioURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
+func (c *Service) CheckAudioAsync(audioURL string, scene int, openID string) (*MediaViolationCheckAsyncResponse, error) {
 	return c.MediaViolationCheckAsync(audioURL, 1, scene, openID)
 }

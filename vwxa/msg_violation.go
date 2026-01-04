@@ -49,8 +49,8 @@ type MsgViolationCheckResponse struct {
 // - Media news user article and comment content detection
 // - Game user uploaded material detection, etc.
 // Rate limit: single appId call limit is 4000 times/minute, 2,000,000 times/day
-func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, error) {
-	accessToken, err := c.GetAccessToken()
+func (c *Service) MsgViolationCheck(content string) (*MsgViolationCheckResponse, error) {
+	accessToken, err := c.authSvc.GetAccessToken()
 	if err != nil {
 		return nil, fmt.Errorf("get access token error: %v", err)
 	}
@@ -66,7 +66,7 @@ func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, 
 		return nil, fmt.Errorf("marshal request error: %v", err)
 	}
 
-	vlog.Infof("msg sec check request: %s", string(data))
+	vlog.Infof("msg sec check | req: %s", string(data))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -74,7 +74,7 @@ func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, 
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			vlog.Errorf("failed to close response body: %v", closeErr)
+			vlog.Errorf("failed to close response body | err: %v", closeErr)
 		}
 	}()
 
@@ -83,7 +83,7 @@ func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, 
 		return nil, fmt.Errorf("read response error: %v", err)
 	}
 
-	vlog.Infof("msg sec check response: %s", string(body))
+	vlog.Infof("msg sec check | resp: %s", string(body))
 
 	var response MsgViolationCheckResponse
 	if err := json.Unmarshal(body, &response); err != nil {
@@ -100,7 +100,7 @@ func (c *Client) MsgViolationCheck(content string) (*MsgViolationCheckResponse, 
 
 // IsMsgContentSafe is a convenient method to check if content is safe.
 // Returns true if content is safe, false if content may have risks.
-func (c *Client) IsMsgContentSafe(content string) (bool, error) {
+func (c *Service) IsMsgContentSafe(content string) (bool, error) {
 	response, err := c.MsgViolationCheck(content)
 	if err != nil {
 		return false, err
