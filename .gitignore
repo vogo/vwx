@@ -13,5 +13,9 @@
 
 .idea
 .vscode
+.trae
 __*
 .env
+
+CLAUDE.md
+
